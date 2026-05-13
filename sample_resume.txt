@@ -1,0 +1,9 @@
+Anuj Kumar
+Python Developer and Data Analyst
+
+Skills: Python, SQL, HTML, CSS, JavaScript, Pandas, NumPy, Git, Streamlit,
+data analysis, data visualization, MySQL.
+
+Projects:
+- Smart grocery recommendation system using Python and pandas.
+- Sales dashboard using Excel and Power BI.

@@ -1,0 +1,7 @@
+We are hiring a Junior Data Scientist.
+
+Required skills: Python, SQL, Machine Learning, Pandas, NumPy, Scikit-learn,
+data visualization, statistics, NLP, AWS, Git.
+
+The candidate should build models, clean datasets, create dashboards, and
+deploy machine learning prototypes.
