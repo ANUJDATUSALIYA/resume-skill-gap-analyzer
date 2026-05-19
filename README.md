@@ -20,10 +20,12 @@ This project uses unsupervised learning and NLP to compare a candidate's resume 
 
 - Python
 - Streamlit
+- Flask
 - Pandas and NumPy
 - Scikit-learn
 - pypdf
 - Plotly
+- Vercel
 
 ## Project Workflow
 
@@ -62,6 +64,10 @@ On Windows PowerShell, you can also run:
 ```powershell
 .\run_app.ps1
 ```
+
+## Vercel Deployment
+
+The repository includes a Flask entrypoint at `api/index.py` and `vercel.json` so the analyzer can be deployed as a Vercel Python app. The `/` route serves a simple web interface, and `/api/analyze` accepts JSON with `resume_text` and `jd_text`.
 
 ## Viva Explanation
 

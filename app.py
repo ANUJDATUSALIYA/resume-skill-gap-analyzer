@@ -1,10 +1,6 @@
 import io
 from html import escape
 
-from dependency_guard import disable_optional_pyarrow
-
-disable_optional_pyarrow()
-
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go

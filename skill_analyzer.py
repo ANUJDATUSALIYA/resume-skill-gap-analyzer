@@ -1,10 +1,6 @@
 import re
 from collections import Counter, defaultdict
 
-from dependency_guard import disable_optional_pyarrow
-
-disable_optional_pyarrow()
-
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
