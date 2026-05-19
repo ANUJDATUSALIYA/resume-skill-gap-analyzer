@@ -1,8 +1,7 @@
 from html import escape
+import re
 
 from flask import Flask, jsonify, request
-
-from skill_analyzer import compare_resume_to_jd, score_multiple_jobs
 
 
 app = Flask(__name__)
@@ -36,6 +35,149 @@ SAMPLE_MULTI_JDS = {
     "Cloud Data Engineer": "Required: Python, SQL, AWS, Docker, Spark, Hadoop, Linux.",
 }
 
+SKILL_CATALOG = [
+    "python",
+    "java",
+    "c++",
+    "c#",
+    "javascript",
+    "typescript",
+    "html",
+    "css",
+    "react",
+    "angular",
+    "node.js",
+    "express",
+    "django",
+    "flask",
+    "fastapi",
+    "sql",
+    "mysql",
+    "postgresql",
+    "mongodb",
+    "oracle",
+    "excel",
+    "power bi",
+    "tableau",
+    "data analysis",
+    "data visualization",
+    "statistics",
+    "machine learning",
+    "deep learning",
+    "natural language processing",
+    "nlp",
+    "computer vision",
+    "scikit-learn",
+    "pandas",
+    "numpy",
+    "tensorflow",
+    "keras",
+    "pytorch",
+    "aws",
+    "azure",
+    "google cloud",
+    "docker",
+    "kubernetes",
+    "git",
+    "github",
+    "linux",
+    "rest api",
+    "api",
+    "streamlit",
+    "matplotlib",
+    "seaborn",
+    "big data",
+    "spark",
+    "hadoop",
+    "devops",
+    "agile",
+    "testing",
+    "selenium",
+    "cybersecurity",
+    "networking",
+    "android",
+    "flutter",
+    "firebase",
+    "ui ux",
+    "figma",
+    "project management",
+]
+
+ALIASES = {
+    "js": "javascript",
+    "node": "node.js",
+    "nodejs": "node.js",
+    "ml": "machine learning",
+    "dl": "deep learning",
+    "natural language processing": "nlp",
+    "postgres": "postgresql",
+    "gcp": "google cloud",
+    "rest": "rest api",
+    "apis": "api",
+    "ms excel": "excel",
+    "powerbi": "power bi",
+    "ui/ux": "ui ux",
+}
+
+COURSE_SUGGESTIONS = {
+    "machine learning": "Complete a beginner ML course and build a classification project with scikit-learn.",
+    "deep learning": "Learn neural networks with TensorFlow or PyTorch and train an image or text model.",
+    "aws": "Study cloud basics, IAM, EC2, S3, and deploy one small web application.",
+    "docker": "Containerize a Python or Node app and write a simple Dockerfile.",
+    "sql": "Practice joins, grouping, subqueries, and window functions on a public dataset.",
+    "react": "Build a dashboard UI with components, state, routing, and API calls.",
+    "python": "Strengthen Python basics, file handling, OOP, pandas, and project structure.",
+    "nlp": "Build a text classification or resume keyword extraction project.",
+    "power bi": "Create an interactive business dashboard using filters and charts.",
+    "git": "Practice branching, commits, pull requests, and resolving merge conflicts.",
+}
+
+SKILL_DOMAINS = {
+    "Programming": {"python", "java", "c++", "c#", "javascript", "typescript"},
+    "Frontend": {"html", "css", "react", "angular", "ui ux", "figma"},
+    "Backend": {"node.js", "express", "django", "flask", "fastapi", "rest api", "api"},
+    "Data": {
+        "sql",
+        "mysql",
+        "postgresql",
+        "mongodb",
+        "oracle",
+        "excel",
+        "pandas",
+        "numpy",
+        "statistics",
+        "data analysis",
+        "data visualization",
+        "power bi",
+        "tableau",
+    },
+    "AI / ML": {
+        "machine learning",
+        "deep learning",
+        "nlp",
+        "computer vision",
+        "scikit-learn",
+        "tensorflow",
+        "keras",
+        "pytorch",
+    },
+    "Cloud / DevOps": {
+        "aws",
+        "azure",
+        "google cloud",
+        "docker",
+        "kubernetes",
+        "linux",
+        "spark",
+        "hadoop",
+        "big data",
+        "devops",
+    },
+    "Quality / Delivery": {"git", "github", "agile", "testing", "selenium", "project management"},
+    "Mobile": {"android", "flutter", "firebase"},
+    "Security": {"cybersecurity", "networking"},
+}
+
 
 def title_skill(skill):
     names = {
@@ -65,9 +207,118 @@ def chip_list(skills, css_class):
 
 
 def dataframe_records(dataframe):
-    if dataframe.empty:
-        return []
-    return dataframe.to_dict(orient="records")
+    return dataframe
+
+
+def normalize_text(text):
+    text = text.lower()
+    text = text.replace("c++", "cplusplus").replace("c#", "csharp").replace("node.js", "nodejs")
+    text = re.sub(r"[^a-z0-9\s.+#/-]", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text.replace("cplusplus", "c++").replace("csharp", "c#").replace("nodejs", "node.js")
+
+
+def extract_skills(text):
+    normalized = normalize_text(text)
+    found = set()
+    for raw_skill in SKILL_CATALOG:
+        skill = normalize_text(raw_skill)
+        pattern = r"(?<![a-z0-9+#.])" + re.escape(skill) + r"(?![a-z0-9+#.])"
+        if re.search(pattern, normalized):
+            found.add(ALIASES.get(skill, skill))
+
+    tokens = set(re.findall(r"[a-z0-9.+#/-]+", normalized))
+    for alias, canonical in ALIASES.items():
+        if alias in tokens or alias in normalized:
+            found.add(canonical)
+    return sorted(found)
+
+
+def infer_skill_domain(skill):
+    for domain, skills in SKILL_DOMAINS.items():
+        if skill in skills:
+            return domain
+    return "Mixed Skills"
+
+
+def compare_resume_to_jd(resume_text, jd_text):
+    resume_skills = extract_skills(resume_text)
+    jd_skills = extract_skills(jd_text)
+    resume_set = set(resume_skills)
+    jd_set = set(jd_skills)
+    matched = sorted(resume_set & jd_set)
+    missing = sorted(jd_set - resume_set)
+    extra = sorted(resume_set - jd_set)
+    match_score = 0 if not jd_skills else round((len(matched) / len(jd_skills)) * 100)
+
+    cluster_map = {}
+    for skill in sorted(resume_set | jd_set):
+        cluster_map.setdefault(infer_skill_domain(skill), {"matched": 0, "missing": 0, "resume_only": 0})
+        if skill in matched:
+            cluster_map[infer_skill_domain(skill)]["matched"] += 1
+        elif skill in missing:
+            cluster_map[infer_skill_domain(skill)]["missing"] += 1
+        else:
+            cluster_map[infer_skill_domain(skill)]["resume_only"] += 1
+
+    cluster_summary = []
+    for cluster_name, counts in sorted(cluster_map.items()):
+        jd_count = counts["matched"] + counts["missing"]
+        coverage = 100 if jd_count == 0 else round((counts["matched"] / jd_count) * 100)
+        priority = "High" if counts["missing"] >= 3 else "Medium" if counts["missing"] else "Low"
+        cluster_summary.append(
+            {
+                "cluster_name": cluster_name,
+                "matched": counts["matched"],
+                "missing": counts["missing"],
+                "resume_only": counts["resume_only"],
+                "coverage": coverage,
+                "priority": priority,
+            }
+        )
+
+    recommendations = [
+        {
+            "skill": skill,
+            "suggestion": COURSE_SUGGESTIONS.get(
+                skill,
+                f"Learn {skill} basics, complete a mini project, and add it to your resume.",
+            ),
+        }
+        for skill in missing
+    ]
+    return {
+        "match_score": match_score,
+        "matched_skills": matched,
+        "missing_skills": missing,
+        "extra_skills": extra,
+        "cluster_summary": sorted(cluster_summary, key=lambda row: row["missing"], reverse=True),
+        "gap_priority": [
+            {
+                "skill": skill,
+                "cluster_name": infer_skill_domain(skill),
+                "priority": "High",
+                "why_it_matters": f"Strengthens the {infer_skill_domain(skill).lower()} cluster required by this role.",
+            }
+            for skill in missing
+        ],
+        "recommendations": recommendations,
+    }
+
+
+def score_multiple_jobs(resume_text, job_descriptions):
+    rows = []
+    for role, jd_text in job_descriptions.items():
+        result = compare_resume_to_jd(resume_text, jd_text)
+        rows.append(
+            {
+                "role": role,
+                "match_score": result["match_score"],
+                "matched_skills": ", ".join(result["matched_skills"]) or "None",
+                "missing_skills": ", ".join(result["missing_skills"]) or "None",
+            }
+        )
+    return sorted(rows, key=lambda row: row["match_score"], reverse=True)
 
 
 def result_payload(resume_text, jd_text):

@@ -50,7 +50,7 @@ python -m venv .venv
 Install dependencies:
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements-streamlit.txt
 ```
 
 Run the app:
@@ -67,7 +67,9 @@ On Windows PowerShell, you can also run:
 
 ## Vercel Deployment
 
-The repository includes a Flask entrypoint at `api/index.py` and `vercel.json` so the analyzer can be deployed as a Vercel Python app. The `/` route serves a simple web interface, and `/api/analyze` accepts JSON with `resume_text` and `jd_text`.
+The repository includes a lightweight Flask entrypoint at `api/index.py` and `vercel.json` so the analyzer can be deployed as a Vercel Python app. The `/` route serves a simple web interface, and `/api/analyze` accepts JSON with `resume_text` and `jd_text`.
+
+Vercel installs `requirements.txt`, which is intentionally minimal for serverless deployment. The full Streamlit dashboard dependencies are kept in `requirements-streamlit.txt`.
 
 ## Viva Explanation
 
